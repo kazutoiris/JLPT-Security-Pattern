@@ -1,0 +1,52 @@
+name: Compile Typst Documents
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Typst Files
+        uses: lvignoli/typst-action@main
+        with:
+          source_file: |
+            main.typ
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            *.pdf
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download PDF
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish release
+        id: publish
+        uses: softprops/action-gh-release@v1
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            *.pdf
+      - name: Attest Release Files
+        id: attest
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            *.pdf
